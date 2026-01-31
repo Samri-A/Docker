@@ -1,29 +1,23 @@
-# ---- Base image ----
 FROM python:3.10-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# ---- System dependencies ----
-RUN apt-get update && apt-get install -y \
-    git \
-    build-essential \
-    curl \
+# If some deps need compiling, keep build-essential. Otherwise you can remove it later.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# ---- Copy EVERYTHING first (required for editable installs) ----
+# Install runtime deps first (cache friendly)
+COPY requirements.txt ./
+RUN python -m pip install --upgrade pip setuptools wheel \
+ && python -m pip install --no-cache-dir -r requirements.txt
+
+# Copy the project and install it (so `import scrape_up` works)
 COPY . .
+RUN python -m pip install --no-cache-dir -e .
 
-# ---- Upgrade pip & pin pytest stack ----
-RUN pip install --upgrade pip setuptools wheel \
-    && pip install \
-        pytest==7.4.4 \
-        "pluggy<1.4"
-
-# ---- Install Allure mono-repo requirements ----
-RUN pip install -r requirements.txt
-
-# ---- Default: run tests ----
-CMD ["python3", "-m", "unittest", "discover", "src/test"]
+# Default: run unit tests
+CMD ["python", "-m", "unittest", "discover", "-s", "src/test", "-p", "*_test.py"]
