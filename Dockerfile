@@ -1,14 +1,15 @@
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install Python dependencies (pinned in requirements files)
-COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Copy and install the project
+COPY requirements.txt ./
+
+RUN python -m pip install --upgrade pip \
+    && python -m pip install --no-cache-dir -r requirements.txt
+
 COPY . .
-RUN pip install --no-cache-dir .
 
-# Run tests by default
-CMD ["python3", "-m", "unittest", "discover", "-s", "tests", "-p", "*_test.py"]
+CMD ["python", "-m", "unittest", "discover", "-s", "tests", "-p", "*_test.py"]
